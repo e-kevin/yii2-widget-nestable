@@ -1,0 +1,28 @@
+{
+    "name": "wonail/yii2-widget-nestable",
+    "description": "",
+    "keywords": [
+        "yii2",
+        "extension",
+        "nestable",
+        "wonail"
+    ],
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "E-Kevin",
+            "email": "e-kevin@qq.com"
+        }
+    ],
+    "type": "yii2-extension",
+    "license": "BSD-3-Clause",
+    "require": {
+        "php": ">=5.4.0",
+        "yiisoft/yii2": "~2.0",
+    },
+    "autoload": {
+        "psr-4": {
+            "wonail\\nestable\\": ""
+        }
+    }
+}
