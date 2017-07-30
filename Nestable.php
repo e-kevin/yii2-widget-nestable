@@ -14,13 +14,7 @@ class Nestable extends InputWidget
 {
 
     /**
-     * @var array the HTML attributes for the widget container tag.
-     * @see Html::renderTagAttributes() for details on how attributes are being rendered.
-     */
-    public $options = [];
-
-    /**
-     * @var string the theme name to be used for styling the Nestable.
+     * @var string 主题名称
      */
     public $theme = '';
 
@@ -50,7 +44,17 @@ class Nestable extends InputWidget
     public $childrenName = 'children';
 
     /**
-     * @var bool
+     * @var string|\Closure 显示标题
+     */
+    public $showTitle = 'title';
+
+    /**
+     * @var string|array 允许设置为`data-`的参数，默认为[[items[]]]数组下的全部数据
+     */
+    public $allowParams;
+
+    /**
+     * @var boolean
      */
     public $draggableHandles = false;
 
@@ -106,7 +110,11 @@ class Nestable extends InputWidget
         }
         // END:nestable-box
         echo Html::endTag('div');
-        echo Html::activeHiddenInput($this->model, $this->attribute);
+        if ($this->hasModel()) {
+            echo Html::activeHiddenInput($this->model, $this->attribute);
+        } else {
+            echo Html::hiddenInput($this->name);
+        }
     }
 
     protected function renderGroup($item)
@@ -127,7 +135,7 @@ class Nestable extends InputWidget
         echo Html::beginTag('div', $this->ddOptions);
         echo Html::tag('div', $item['title'], ['class' => 'nestable-title']);
         // BEGIN:dd-list
-        echo $this->renderList($item['items']);
+        $this->renderList(isset($item['items']) ? $item['items'] : []);
         // END:dd-list
         // END:dd
         echo Html::endTag('div');
@@ -135,9 +143,9 @@ class Nestable extends InputWidget
         echo Html::endTag('div');
     }
 
-    private function renderList($level)
+    private function renderList($items)
     {
-        if (empty($level)) {
+        if (empty($items)) {
             echo Html::tag('div', '', ['class' => 'dd-empty']);
         } else {
             $options['class'] = 'dd-list';
@@ -145,7 +153,7 @@ class Nestable extends InputWidget
                 Html::addCssClass($options, 'dd-' . $this->theme);
             }
             echo Html::beginTag('ol', $options);
-            foreach ($level as $item) {
+            foreach ($items as $item) {
                 $this->renderItem($item);
             }
             echo Html::endTag('ol');
@@ -159,23 +167,37 @@ class Nestable extends InputWidget
         } else {
             $options = ['class' => 'dd-item'];
         }
+        // 设置`data-`格式参数
+        if (is_string($this->allowParams)) {
+            $this->allowParams = explode(',', $this->allowParams);
+        }
         foreach ($item as $k => $v) {
-            if ($k !== $this->childrenName) {
+            if (is_array($this->allowParams)) {
+                if (in_array($k, $this->allowParams)) {
+                    $options['data'][$k] = $v;
+                }
+            } elseif ($k !== $this->childrenName) {
                 $options['data'][$k] = $v;
             }
         }
 
         echo Html::beginTag('li', $options);
 
+        if ($this->showTitle instanceof \Closure) {
+            $title = call_user_func($this->showTitle, $item);
+        } else {
+            $title = $item[$this->showTitle];
+        }
+
         if ($this->draggableHandles) {
             echo Html::tag('div', Html::tag('span', 'Drag', ['class' => 'sr-only']), ['class' => 'dd-handle dd3-handle']);
-            echo Html::tag('div', $item['title'], ['class' => 'dd3-content']);
+            echo Html::tag('div', $title, ['class' => 'dd3-content']);
         } else {
-            echo Html::tag('div', $item['title'], ['class' => 'dd-handle']);
+            echo Html::tag('div', $title, ['class' => 'dd-handle']);
         }
 
         if (isset($item[$this->childrenName]) && count($item[$this->childrenName])) {
-            $this->printLevel($item[$this->childrenName]);
+            $this->renderList($item[$this->childrenName]);
         }
 
         echo Html::endTag('li');
@@ -190,7 +212,7 @@ class Nestable extends InputWidget
         NestableAsset::register($view);
 
         $pluginOptions = Json::encode($this->pluginOptions);
-        $name = Html::getInputName($this->model, $this->attribute);
+        $name = $this->hasModel() ? Html::getInputName($this->model, $this->attribute) : $this->name;
         $js = <<<JS
 $(document).ready(function () {
 
@@ -208,7 +230,6 @@ $(document).ready(function () {
 
         $("[name=\"{$name}\"]").val(JSON.stringify(nestable));
     });
-
 });
 JS;
         $view->registerJs($js);
