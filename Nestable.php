@@ -1,8 +1,6 @@
 <?php
 namespace wonail\nestable;
 
-use yii\base\InvalidConfigException;
-use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\widgets\InputWidget;
@@ -57,6 +55,11 @@ class Nestable extends InputWidget
      * @var boolean
      */
     public $draggableHandles = false;
+
+    /**
+     * @var boolean 是否折叠，默认为`false`
+     */
+    public $collapsed = false;
 
     /**
      * @var array widget plugin options.
@@ -167,6 +170,11 @@ class Nestable extends InputWidget
         } else {
             $options = ['class' => 'dd-item'];
         }
+
+        if ($this->collapsed) {
+            Html::addCssClass($options, 'dd-collapsed');
+        }
+
         // 设置`data-`格式参数
         if (is_string($this->allowParams)) {
             $this->allowParams = explode(',', $this->allowParams);
@@ -214,8 +222,6 @@ class Nestable extends InputWidget
         $pluginOptions = Json::encode($this->pluginOptions);
         $name = $this->hasModel() ? Html::getInputName($this->model, $this->attribute) : $this->name;
         $js = <<<JS
-$(document).ready(function () {
-
     $('.dd').nestable({$pluginOptions}).on('change', function () {
         var obj = $(this).parents('.nestable-box'),
             nestable = new Array();
@@ -230,8 +236,10 @@ $(document).ready(function () {
 
         $("[name=\"{$name}\"]").val(JSON.stringify(nestable));
     });
-});
 JS;
+        if ($this->collapsed) {
+            $js .= "\n$('.dd').nestable('collapseAll')";
+        }
         $view->registerJs($js);
     }
 
